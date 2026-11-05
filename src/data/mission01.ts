@@ -20,21 +20,21 @@ Compartments
 export const MISSION01_LAYOUT: readonly string[] = [
   '####################', // 0
   '#h...h#..#.........#', // 1
-  '#..v..#..#.v....v..#', // 2
+  '#..v..#..#.v.......#', // 2
   '#.....o..#..FF.....#', // 3
-  '#h...h#..c..FF.....#', // 4
+  '#h...h#..c..FF...v.#', // 4
   '#.....#..#....h....#', // 5
   '###c###.v#......K..#', // 6
   '#.....#..#....h....#', // 7
   '#+..h.#..#..FF..h..#', // 8
   '#.....o..o..FF.....#', // 9
   '#..h.v#..#..v....v.#', // 10
-  '#.....#..#.h.....h.#', // 11
+  '#.....#.h#.h.....h.#', // 11
   '###o###..#####o#####', // 12
-  '#.....#..#.........#', // 13
-  '#h...v#..#..F...h..#', // 14
+  '#..h..#..#.........#', // 13
+  '#h...v#h.#..F...h..#', // 14
   '#..h..o..#..F......#', // 15
-  '#.EEE.#..o.........#', // 16
+  '#.EEEh#..o.........#', // 16
   '#.EEE.#..#.......P.#', // 17
   '#.....#..#h.......h#', // 18
   '####################', // 19
@@ -81,7 +81,7 @@ export const ROOMS: readonly Room[] = [
 export const MISSION01_VENTS: readonly Pos[] = [
   { x: 12, y: 10 }, // engine room, aft port
   { x: 17, y: 10 }, // engine room, aft starboard
-  { x: 16, y: 2 }, // engine room, forward starboard
+  { x: 17, y: 4 }, // engine room, beside the console
   { x: 11, y: 2 }, // engine room, forward port
   { x: 3, y: 2 }, // sickbay
   { x: 8, y: 6 }, // passageway
@@ -90,7 +90,9 @@ export const MISSION01_VENTS: readonly Pos[] = [
 ];
 
 const STARTING_CONTAMINATION: { pos: Pos; level: ContaminationLevel }[] = [
-  { pos: { x: 8, y: 6 }, level: 2 }, // passageway vent, nearest the sickbay
+  // The two vents next to the sickbay in the duct network start moderate.
+  { pos: { x: 8, y: 6 }, level: 2 }, // passageway vent
+  { pos: { x: 11, y: 2 }, level: 2 }, // engine room forward vent
 ];
 
 type UnitTemplate = Omit<
@@ -137,8 +139,8 @@ const ENEMY_UNITS: UnitTemplate[] = [
   concordat(3, { x: 14, y: 9 }),
   unbound(1, { x: 11, y: 6 }),
   unbound(2, { x: 11, y: 10 }),
-  unbound(3, { x: 15, y: 14 }),
-  unbound(4, { x: 12, y: 17 }),
+  unbound(3, { x: 17, y: 14 }),
+  unbound(4, { x: 16, y: 18 }),
 ];
 
 function roomAt(x: number, y: number): string | undefined {

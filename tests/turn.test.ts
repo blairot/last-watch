@@ -32,8 +32,8 @@ describe('moveUnit', () => {
 
   it('spends 2 AP for a long move', () => {
     const { s, holt } = fresh();
-    // (2,16) -> (7,13): around the crate, out via the boarding hatch at (6,15), 10 steps.
-    const r = moveUnit(s, 'holt', { x: 7, y: 13 });
+    // (2,16) -> (7,16): around the crate, out via the boarding hatch at (6,15), 9 steps.
+    const r = moveUnit(s, 'holt', { x: 7, y: 16 });
     expect(r.ok && r.apCost).toBe(2);
     expect(holt.ap).toBe(0);
   });
@@ -51,7 +51,7 @@ describe('moveUnit', () => {
   it('refuses a 2 AP move when only 1 AP remains', () => {
     const { s, holt } = fresh();
     holt.ap = 1;
-    const plan = planMove(s, holt, { x: 7, y: 13 });
+    const plan = planMove(s, holt, { x: 7, y: 16 });
     expect(plan.ok).toBe(false);
     expect(holt.ap).toBe(1);
   });
@@ -89,7 +89,8 @@ describe('moveRange', () => {
 describe('round structure', () => {
   it('runs the enemy phase, advances the round, and refreshes player AP', () => {
     const { s, holt } = fresh();
-    moveUnit(s, 'holt', { x: 7, y: 13 });
+    s.units = s.units.filter((u) => u.faction === 'player' || u.id === 'concordat1');
+    moveUnit(s, 'holt', { x: 7, y: 16 });
     expect(holt.ap).toBe(0);
     endPlayerTurn(s);
     expect(s.round).toBe(2);

@@ -1,12 +1,13 @@
 // Enemy decision making: a small utility AI. Each step it scores every option it has
 // (shoot, move somewhere, overwatch, open a hatch, or hold) and takes the best one.
 // Tune behaviour through the WEIGHTS table below.
+import { abilityReady, abilityTargets, useAbility } from './abilities';
 import { apCostForSteps, canAct, canShoot, isBeside, moveRange, moveUnit, setOverwatch, shoot, toggleHatch } from './actions';
 import { coverFrom, expectedDamage, previewShot, type CoverLevel } from './combat';
 import { projectExposure } from './contamination';
 import { chebyshev, distanceField, hasLineOfSight, keyPos, neighbors, posKey, tileAt } from './map';
 import type { MissionState, Pos, Unit } from './types';
-import { isActive, unitsOf } from './units';
+import { areHostile, isActive, unitsOf } from './units';
 
 export interface AiWeights {
   /** Per point of expected damage from the best shot available. */
@@ -36,16 +37,16 @@ export interface AiWeights {
   apSpend: number;
 }
 
-export const WEIGHTS: Record<'concordat' | 'unbound' | 'unboundRetreat', AiWeights> = {
+export const WEIGHTS: Record<'concordat' | 'unbound' | 'unboundRetreat' | 'squadBot', AiWeights> = {
   // Disciplined: hold cover near the console, move in pairs, look for flanks.
   concordat: {
     shot: 3, kill: 4, cover: 2, exposed: 2.5, flank: 2, approach: 0.15,
     consoleRadius: 5, consolePull: 1.2, pair: 2, pairRange: 3,
-    contamination: 0.4, overwatch: 2.5, apSpend: 0.3,
+    contamination: 1.5, overwatch: 1.5, apSpend: 0.3,
   },
   // Aggressive: close the distance and shoot; badly fear contamination (no protective gear).
   unbound: {
-    shot: 3.5, kill: 4, cover: 0.8, exposed: 1, flank: 1, approach: 0.6,
+    shot: 3.5, kill: 4, cover: 0.8, exposed: 1, flank: 1, approach: 0.4,
     consoleRadius: 99, consolePull: 0, pair: 0, pairRange: 0,
     contamination: 0.6, overwatch: 0, apSpend: 0.2,
   },
@@ -54,6 +55,13 @@ export const WEIGHTS: Record<'concordat' | 'unbound' | 'unboundRetreat', AiWeigh
     shot: 1.5, kill: 3, cover: 2, exposed: 2.5, flank: 0.5, approach: -0.8,
     consoleRadius: 99, consolePull: 0, pair: 0, pairRange: 0,
     contamination: 0.6, overwatch: 0, apSpend: 0.1,
+  },
+  // A simple stand-in player used only by the balance simulator: push to the console, use cover,
+  // shoot. It never uses abilities or hatches, so it plays worse than a careful human.
+  squadBot: {
+    shot: 3, kill: 4, cover: 2, exposed: 2.5, flank: 1.5, approach: 0,
+    consoleRadius: 1, consolePull: 1.2, pair: 0, pairRange: 0,
+    contamination: 0.5, overwatch: 1, apSpend: 0.2,
   },
 };
 
@@ -70,6 +78,7 @@ export function isRetreating(state: MissionState, u: Unit): boolean {
 }
 
 export function weightsFor(state: MissionState, u: Unit): AiWeights {
+  if (u.faction === 'player') return WEIGHTS.squadBot;
   if (u.faction === 'concordat') return WEIGHTS.concordat;
   return isRetreating(state, u) ? WEIGHTS.unboundRetreat : WEIGHTS.unbound;
 }
@@ -79,12 +88,12 @@ interface Context {
   unit: Unit;
   w: AiWeights;
   threats: Unit[];
-  /** Walking distance to the nearest squad member, through closed (not welded) hatches. */
+  /** Walking distance to the nearest hostile, through closed (not welded) hatches. */
   dist: Map<string, number>;
 }
 
 function makeContext(state: MissionState, unit: Unit): Context {
-  const threats = unitsOf(state, 'player').filter(isActive);
+  const threats = state.units.filter((t) => isActive(t) && areHostile(unit, t));
   return {
     state, unit, w: weightsFor(state, unit), threats,
     dist: distanceField(state, threats.map((t) => t.pos), true),
@@ -211,6 +220,32 @@ export function takeTurn(state: MissionState, unit: Unit): void {
         if (!toggleHatch(state, unit.id, best.at).ok) return;
         break;
     }
+  }
+}
+
+/** Simulator only: a corpsman bot walks to a downed ally and revives them if it can this turn. */
+function botStabilize(state: MissionState, u: Unit): void {
+  if (!u.abilities.includes('stabilize') || !unitsOf(state, 'player').some((a) => a.downed)) return;
+  const tryUse = (): boolean => {
+    const t = abilityTargets(state, u, 'stabilize');
+    return t.length > 0 && abilityReady(state, u, 'stabilize').ok && useAbility(state, u.id, 'stabilize', t[0]).ok;
+  };
+  if (tryUse()) return;
+  const downed = unitsOf(state, 'player').filter((a) => a.downed);
+  const spots = [...moveRange(state, u).tiles]
+    .map(([k, cost]) => ({ p: keyPos(k), cost }))
+    .filter(({ p, cost }) => apCostForSteps(u, cost) <= u.ap - 1 && downed.some((d) => chebyshev(d.pos, p) === 1))
+    .sort((a, b) => a.cost - b.cost);
+  if (spots.length > 0 && moveUnit(state, u.id, spots[0].p).ok) tryUse();
+}
+
+/** Simulator only: the squad bot plays the player phase. */
+export function runSquadBot(state: MissionState): void {
+  for (const u of unitsOf(state, 'player')) {
+    if (state.outcome !== 'ongoing') return;
+    if (!isActive(u)) continue;
+    botStabilize(state, u);
+    takeTurn(state, u);
   }
 }
 

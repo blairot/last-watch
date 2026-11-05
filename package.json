@@ -7,7 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sim": "vitest run --config vitest.sim.config.ts"
   },
   "dependencies": {
     "phaser": "^4.2.1"

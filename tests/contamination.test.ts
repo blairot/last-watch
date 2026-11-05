@@ -143,7 +143,7 @@ describe('mission 01 contamination', () => {
     s.ventDirection = -1;
     for (let i = 0; i < 6; i++) spreadContamination(s);
     expect(s.tiles[2][11].contamination).toBe(3); // first engine vent
-    expect(s.tiles[2][16].contamination).toBeGreaterThan(0);
+    expect(s.tiles[4][17].contamination).toBeGreaterThan(0); // the vent beside the console
   });
 });
 

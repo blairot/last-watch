@@ -45,6 +45,7 @@ export function applyDamage(state: MissionState, u: Unit, amount: number): boole
   } else {
     state.log.push(`${u.name} is eliminated.`);
   }
+  state.fx.push({ kind: 'drop', unitId: u.id, dead: u.faction !== 'player' });
   state.fx.push({ kind: 'text', pos: { ...u.pos }, text: u.faction === 'player' ? 'DOWN' : 'KILLED', tone: u.faction === 'player' ? 'bad' : 'good' });
   checkOutcome(state);
   return true;

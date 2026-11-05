@@ -99,6 +99,7 @@ export type Fx =
       reaction: boolean;
     }
   | { kind: 'text'; pos: Pos; text: string; tone: 'bad' | 'good' | 'info' }
+  | { kind: 'drop'; unitId: string; dead: boolean }
   | { kind: 'phase'; text: string };
 
 export type Phase = 'player' | 'enemy';
