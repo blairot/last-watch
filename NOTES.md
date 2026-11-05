@@ -12,11 +12,12 @@ Newest session first. Put playtest notes for the next session at the very top, u
 
 Sessions 1 to 4 are done except deployment. The mission plays start to finish in a desktop browser: briefing, then the map, then a victory or defeat screen. `npm run build` and `npm test` (82 tests) pass.
 
-**Deployed URL:** not yet. No GitHub repo has been created or pushed; see the steps below.
+**Repository:** https://github.com/blairot/last-watch (public, created 2026-11-05).
+**Deployed URL:** not live yet. The first workflow run passed install, tests, and build, but stopped at `configure-pages` because Pages isn't enabled. After step 3 below it should be `https://blairot.github.io/last-watch/`.
 
 ### What the developer needs to do
-1. Create a GitHub repository (suggested: `blairot/last-watch`). It must be **public** for free GitHub Pages; Pages on a private repo needs a paid plan.
-2. Push this local repo (branch `main`) to it.
+1. ~~Create the GitHub repository~~ (done: `blairot/last-watch`, public).
+2. ~~Push branch `main`~~ (done).
 3. In the repository: Settings → Pages → Build and deployment → Source: **GitHub Actions**.
 4. The workflow `.github/workflows/deploy.yml` runs the tests, builds, and deploys on every push to `main` (or run it by hand from the Actions tab). The URL will be `https://blairot.github.io/last-watch/`. Record it here.
 5. Play it, and put notes under "Playtest notes" above.
