@@ -11,7 +11,7 @@ Newest session first. Put playtest notes for the next session at the very top, u
 ## Session 1: Foundation (2026-11-05)
 
 ### Done
-- Scaffolded Vite 8.1.5 + TypeScript 5.9 (strict) + Phaser 4.2.1 + Vitest 4.1. `npm run dev` binds to 127.0.0.1:5173. Vite `base: './'` so the build works from a GitHub Pages subpath.
+- Scaffolded Vite 8.3.6 + TypeScript 5.9 (strict) + Phaser 4.2.1 + Vitest 4.1.12 (patched with `npm audit fix` after setup; `npm audit` is clean). `npm run dev` binds to 127.0.0.1:5173. Vite `base: './'` so the build works from a GitHub Pages subpath.
 - Phaser 4 ships agent skill files in `node_modules/phaser/skills/` (for example `v3-to-v4-migration`, `graphics-and-shapes`, `input-keyboard-mouse-touch`, `scenes`, `tweens`). Read these before writing Phaser code.
 - Logic, with no Phaser imports:
   - `src/logic/types.ts`: Tile, Unit, MissionState, Action, and related types.
@@ -39,6 +39,5 @@ Newest session first. Put playtest notes for the next session at the very top, u
 - Combat log entries (the log panel already exists).
 
 ### Known issues
-- `npm audit` reports advisories in vite 8.1.5 and vitest 4.1.10 (dev-server / test-runner only; nothing ships in the build). Fixed versions need a small download: run `npm audit fix` once approved.
 - The bundle is 1.4 MB (Phaser itself), so Vite's chunk-size warning limit is raised to 2000 kB.
 - Hot reload restarts the mission (state lives in the scene).
