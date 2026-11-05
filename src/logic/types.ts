@@ -69,11 +69,37 @@ export interface Unit {
   ap: number;
   /** Set when the unit shoots (shooting ends its turn) or otherwise finishes. */
   turnEnded: boolean;
+  /** 0 to 100. At 100 the unit becomes infected. */
   exposure: number;
+  /** Sticky: once infected, decon lowers exposure but does not cure the infection. */
+  infected: boolean;
+  /** Player units at 0 HP are downed (revivable). Enemy units at 0 HP are dead (hp 0, downed false). */
   downed: boolean;
+  /** Fires at the first opposing unit that moves in its line of sight. Cleared at the start of its next turn. */
+  overwatch: boolean;
+  /** AP lost at the start of the unit's next turn (from Breach). */
+  apPenalty: number;
   /** Rounds remaining before each ability can be used again. */
   cooldowns: Partial<Record<AbilityId, number>>;
 }
+
+export type ShotOutcome = 'miss' | 'graze' | 'hit';
+
+/** Presentation events produced by the logic, played back in order by the scene, then cleared. */
+export type Fx =
+  | { kind: 'move'; unitId: string; path: Pos[] }
+  | {
+      kind: 'shot';
+      shooterId: string;
+      targetId: string;
+      from: Pos;
+      to: Pos;
+      outcome: ShotOutcome;
+      damage: number;
+      reaction: boolean;
+    }
+  | { kind: 'text'; pos: Pos; text: string; tone: 'bad' | 'good' | 'info' }
+  | { kind: 'phase'; text: string };
 
 export type Phase = 'player' | 'enemy';
 
@@ -94,12 +120,23 @@ export interface MissionState {
   consolePos: Pos;
   log: string[];
   outcome: Outcome;
+  /** Why the mission ended, for the end screen. */
+  outcomeReason: string;
   /** Seeded RNG state, so a mission can be saved and replayed. */
   rngState: number;
+  /** Pending presentation events (see Fx). The scene drains this. */
+  fx: Fx[];
 }
 
 export type Action =
   | { kind: 'move'; unitId: string; to: Pos }
+  | { kind: 'shoot'; unitId: string; targetId: string }
+  | { kind: 'overwatch'; unitId: string }
+  | { kind: 'hatch'; unitId: string; at: Pos }
+  | { kind: 'ability'; unitId: string; ability: AbilityId; target: Pos }
   | { kind: 'endTurn' };
+
+/** Result of any player or AI action. */
+export type ActionResult = { ok: true } | { ok: false; reason: string };
 
 export const AP_PER_TURN = 2;

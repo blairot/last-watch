@@ -334,7 +334,7 @@ export class MissionScene extends Phaser.Scene {
       const range = moveRange(this.state, sel);
       for (const [key, steps] of range.tiles) {
         const [x, y] = key.split(',').map(Number);
-        const oneAp = steps <= range.oneApSteps;
+        const oneAp = steps <= range.oneApCost;
         g.fillStyle(oneAp ? COLORS.moveOneAp : COLORS.moveTwoAp, oneAp ? 0.38 : 0.14);
         g.fillRect(MAP_X + x * TILE + 1, MAP_Y + y * TILE + 1, TILE - 2, TILE - 2);
       }

@@ -1,25 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildTiles, createMission01, MISSION01_LAYOUT } from '../src/data/mission01';
+import { createMission01, MISSION01_LAYOUT } from '../src/data/mission01';
 import { findPath, isPassable, manhattan, posKey, reachableTiles } from '../src/logic/map';
-import type { MissionState, Pos, Unit } from '../src/logic/types';
-
-/** Minimal state from an ASCII layout, with optional units. */
-function stateFrom(layout: string[], units: Unit[] = []): MissionState {
-  const tiles = buildTiles(layout);
-  return {
-    width: tiles[0].length, height: tiles.length, tiles, units,
-    round: 1, maxRounds: 15, phase: 'player', vents: [], ventDirection: 1,
-    consolePos: { x: 0, y: 0 }, log: [], outcome: 'ongoing', rngState: 1,
-  };
-}
-
-function unit(id: string, pos: Pos, overrides: Partial<Unit> = {}): Unit {
-  return {
-    id, name: id, faction: 'player', unitClass: 'marineRifleman', pos,
-    hp: 10, maxHp: 10, move: 5, aim: 80, gear: 'none', damage: [3, 5], abilities: [],
-    ap: 2, turnEnded: false, exposure: 0, downed: false, cooldowns: {}, ...overrides,
-  };
-}
+import type { Pos } from '../src/logic/types';
+import { stateFrom, unit } from './helpers';
 
 function assertContiguous(from: Pos, path: Pos[]): void {
   let prev = from;

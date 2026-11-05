@@ -1,82 +1,20 @@
-// Turn and round flow. Win and loss checks arrive in session 4.
-import { findPath, reachableTiles } from './map';
-import { AP_PER_TURN, type Faction, type MissionState, type Pos, type Unit } from './types';
+// Turn and round flow, plus the end-of-turn victory and round-limit checks.
+import { runEnemyAi } from './ai';
+import { applyEndOfTurnExposure, applyInfectionDamage, spreadContamination } from './contamination';
+import { AP_PER_TURN, type MissionState, type Unit } from './types';
+import { checkConsoleVictory, checkOutcome, isActive, isEnemy } from './units';
 
-export const isActive = (u: Unit): boolean => u.hp > 0 && !u.downed;
+export { apCostForSteps, maxMoveCost, moveRange, moveUnit, planMove } from './actions';
+export { effectiveMove, getUnit, isActive, unitsOf } from './units';
 
-export const unitsOf = (state: MissionState, faction: Faction | 'enemy'): Unit[] =>
-  state.units.filter((u) => (faction === 'enemy' ? u.faction !== 'player' : u.faction === faction));
-
-export function getUnit(state: MissionState, id: string): Unit | undefined {
-  return state.units.find((u) => u.id === id);
-}
-
-/** Move stat after status effects (infection applies -1 in session 3). */
-export function effectiveMove(unit: Unit): number {
-  return unit.move;
-}
-
-/**
- * AP needed to walk `steps` tiles: up to Move tiles costs 1 AP, up to 2x Move costs 2 AP.
- * Returns Infinity when the distance is beyond two moves.
- */
-export function apCostForSteps(unit: Unit, steps: number): number {
-  if (steps <= 0) return 0;
-  const move = effectiveMove(unit);
-  if (steps <= move) return 1;
-  if (steps <= move * 2) return 2;
-  return Infinity;
-}
-
-/** Furthest a unit can walk with its remaining AP this turn. */
-export function maxMoveSteps(unit: Unit): number {
-  if (!isActive(unit) || unit.turnEnded) return 0;
-  return effectiveMove(unit) * Math.min(unit.ap, 2);
-}
-
-export interface MoveRange {
-  /** posKey -> steps */
-  tiles: Map<string, number>;
-  /** Steps reachable for a single AP. */
-  oneApSteps: number;
-}
-
-export function moveRange(state: MissionState, unit: Unit): MoveRange {
-  return { tiles: reachableTiles(state, unit, maxMoveSteps(unit)), oneApSteps: effectiveMove(unit) };
-}
-
-export type MovePlan =
-  | { ok: true; path: Pos[]; apCost: number }
-  | { ok: false; reason: string };
-
-export function planMove(state: MissionState, unit: Unit, to: Pos): MovePlan {
-  if (state.phase !== 'player' && unit.faction === 'player') return { ok: false, reason: 'Not the player phase' };
-  if (!isActive(unit)) return { ok: false, reason: `${unit.name} cannot act` };
-  if (unit.turnEnded || unit.ap <= 0) return { ok: false, reason: `${unit.name} has no AP left` };
-  const result = findPath(state, unit.pos, to, unit);
-  if (!result || result.path.length === 0) return { ok: false, reason: 'No path' };
-  const apCost = apCostForSteps(unit, result.path.length);
-  if (apCost > unit.ap) return { ok: false, reason: 'Out of range' };
-  return { ok: true, path: result.path, apCost };
-}
-
-/** Moves a unit, spending AP. Returns the plan so the UI can animate the path. */
-export function moveUnit(state: MissionState, unitId: string, to: Pos): MovePlan {
-  const unit = getUnit(state, unitId);
-  if (!unit) return { ok: false, reason: 'Unknown unit' };
-  const plan = planMove(state, unit, to);
-  if (!plan.ok) return plan;
-  unit.pos = { ...to };
-  unit.ap -= plan.apCost;
-  state.log.push(`${unit.name} moves ${plan.path.length} tiles (${plan.apCost} AP).`);
-  return plan;
-}
-
-function refreshFaction(state: MissionState, isEnemy: boolean): void {
+/** Start of a side's turn: refresh AP (minus any Breach penalty), clear overwatch, tick cooldowns. */
+function refreshSide(state: MissionState, enemySide: boolean): void {
   for (const u of state.units) {
-    if ((u.faction !== 'player') !== isEnemy) continue;
-    u.ap = isActive(u) ? AP_PER_TURN : 0;
+    if (isEnemy(u) !== enemySide) continue;
+    u.ap = isActive(u) ? Math.max(0, AP_PER_TURN - u.apPenalty) : 0;
+    u.apPenalty = 0;
     u.turnEnded = false;
+    u.overwatch = false;
     for (const key of Object.keys(u.cooldowns) as (keyof Unit['cooldowns'])[]) {
       const left = (u.cooldowns[key] ?? 0) - 1;
       if (left > 0) u.cooldowns[key] = left;
@@ -87,28 +25,46 @@ function refreshFaction(state: MissionState, isEnemy: boolean): void {
 
 export function beginPlayerPhase(state: MissionState): void {
   state.phase = 'player';
-  refreshFaction(state, false);
-  state.log.push(`— Round ${state.round}: player phase —`);
+  refreshSide(state, false);
+  state.log.push(`— Round ${state.round} of ${state.maxRounds}: player phase —`);
+  state.fx.push({ kind: 'phase', text: `ROUND ${state.round}` });
 }
 
-/** Enemy phase. AI arrives in session 2; for now enemies only refresh AP and pass. */
+/** Enemy phase: AI turns, then enemies take exposure for where they ended. */
 export function runEnemyPhase(state: MissionState): void {
   state.phase = 'enemy';
-  refreshFaction(state, true);
-  state.log.push('Enemy phase: the enemy holds position.');
-  for (const u of unitsOf(state, 'enemy')) u.ap = 0;
+  refreshSide(state, true);
+  state.log.push('— Enemy phase —');
+  state.fx.push({ kind: 'phase', text: 'ENEMY PHASE' });
+  runEnemyAi(state);
+  if (state.outcome === 'ongoing') applyEndOfTurnExposure(state, 'enemy');
+  checkOutcome(state);
 }
 
-/** End-of-round step: contamination spread and exposure arrive in session 3. */
+/** End of round: infection damage, contamination spread, then the round limit. */
 export function endRound(state: MissionState): void {
+  applyInfectionDamage(state);
+  if (state.outcome !== 'ongoing') return;
+  const spread = spreadContamination(state);
+  if (spread > 0) state.log.push(`Contamination spreads (${spread} tiles worsen).`);
+  if (state.round >= state.maxRounds) {
+    state.outcome = 'defeat';
+    state.outcomeReason = `Round ${state.maxRounds} ended without control of the console.`;
+    state.log.push('MISSION FAILED.');
+    return;
+  }
   state.round += 1;
 }
 
-/** Player presses End Turn: enemy phase, end of round, then the next player phase. */
+/** Player presses End Turn: exposure, console check, enemy phase, end of round, next player phase. */
 export function endPlayerTurn(state: MissionState): void {
   if (state.outcome !== 'ongoing' || state.phase !== 'player') return;
+  applyEndOfTurnExposure(state, 'player');
+  checkOutcome(state);
+  if (state.outcome !== 'ongoing' || checkConsoleVictory(state)) return;
   runEnemyPhase(state);
+  if (state.outcome !== 'ongoing') return;
   endRound(state);
+  if (state.outcome !== 'ongoing') return;
   beginPlayerPhase(state);
 }
-

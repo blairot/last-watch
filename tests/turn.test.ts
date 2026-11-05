@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMission01 } from '../src/data/mission01';
 import { Rng } from '../src/logic/rng';
-import { apCostForSteps, endPlayerTurn, getUnit, maxMoveSteps, moveRange, moveUnit, planMove } from '../src/logic/turn';
+import { apCostForSteps, endPlayerTurn, getUnit, maxMoveCost, moveRange, moveUnit, planMove } from '../src/logic/turn';
 
 const fresh = () => {
   const s = createMission01();
@@ -76,7 +76,7 @@ describe('moveUnit', () => {
 describe('moveRange', () => {
   it('covers 2x Move with 2 AP and Move with 1 AP', () => {
     const { s, holt } = fresh();
-    expect(maxMoveSteps(holt)).toBe(10);
+    expect(maxMoveCost(holt)).toBe(10);
     const full = moveRange(s, holt);
     expect(Math.max(...full.tiles.values())).toBeLessThanOrEqual(10);
     holt.ap = 1;

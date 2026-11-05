@@ -20,7 +20,7 @@ Compartments
 export const MISSION01_LAYOUT: readonly string[] = [
   '####################', // 0
   '#h...h#..#.........#', // 1
-  '#..v..#..#.v.......#', // 2
+  '#..v..#..#.v....v..#', // 2
   '#.....o..#..FF.....#', // 3
   '#h...h#..c..FF.....#', // 4
   '#.....#..#....h....#', // 5
@@ -28,7 +28,7 @@ export const MISSION01_LAYOUT: readonly string[] = [
   '#.....#..#....h....#', // 7
   '#+..h.#..#..FF..h..#', // 8
   '#.....o..o..FF.....#', // 9
-  '#..h.v#..#.......v.#', // 10
+  '#..h.v#..#..v....v.#', // 10
   '#.....#..#.h.....h.#', // 11
   '###o###..#####o#####', // 12
   '#.....#..#.........#', // 13
@@ -75,11 +75,14 @@ export const ROOMS: readonly Room[] = [
 /**
  * Vent network in network order. With ventDirection = 1, air flows toward higher indices:
  * from the sickbay out into the passageway, mess, and boarding area, toward the squad.
- * Reverse Fan flips it so the sickbay's air flows into the engine room vents instead.
+ * Reverse Fan flips it so the sickbay's air runs through the four engine room vents instead,
+ * one vent further each round or so.
  */
 export const MISSION01_VENTS: readonly Pos[] = [
-  { x: 17, y: 10 }, // engine room, aft
-  { x: 11, y: 2 }, // engine room, forward
+  { x: 12, y: 10 }, // engine room, aft port
+  { x: 17, y: 10 }, // engine room, aft starboard
+  { x: 16, y: 2 }, // engine room, forward starboard
+  { x: 11, y: 2 }, // engine room, forward port
   { x: 3, y: 2 }, // sickbay
   { x: 8, y: 6 }, // passageway
   { x: 5, y: 10 }, // mess
@@ -90,7 +93,10 @@ const STARTING_CONTAMINATION: { pos: Pos; level: ContaminationLevel }[] = [
   { pos: { x: 8, y: 6 }, level: 2 }, // passageway vent, nearest the sickbay
 ];
 
-type UnitTemplate = Omit<Unit, 'ap' | 'turnEnded' | 'exposure' | 'downed' | 'cooldowns' | 'hp'>;
+type UnitTemplate = Omit<
+  Unit,
+  'ap' | 'turnEnded' | 'exposure' | 'infected' | 'downed' | 'overwatch' | 'apPenalty' | 'cooldowns' | 'hp'
+>;
 
 const PLAYER_UNITS: UnitTemplate[] = [
   {
@@ -173,7 +179,10 @@ export function createMission01(seed = 131): MissionState {
     ap: AP_PER_TURN,
     turnEnded: false,
     exposure: 0,
+    infected: false,
     downed: false,
+    overwatch: false,
+    apPenalty: 0,
     cooldowns: {},
   }));
 
@@ -188,8 +197,10 @@ export function createMission01(seed = 131): MissionState {
     vents: MISSION01_VENTS.map((p) => ({ ...p })),
     ventDirection: 1,
     consolePos,
-    log: ['USS Halyard boarding party is aboard. Seize the engine room console.', '— Round 1: player phase —'],
+    log: ['USS Halyard boarding party is aboard. Seize the engine room console.', '— Round 1 of 15: player phase —'],
     outcome: 'ongoing',
+    outcomeReason: '',
     rngState: seed,
+    fx: [],
   };
 }
