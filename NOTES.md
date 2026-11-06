@@ -13,12 +13,16 @@ Newest session first. Put playtest notes for the next session at the very top, u
 Sessions 1 to 4 are done except deployment. The mission plays start to finish in a desktop browser: briefing, then the map, then a victory or defeat screen. `npm run build` and `npm test` (82 tests) pass.
 
 **Repository:** https://github.com/blairot/last-watch (public, created 2026-11-05).
-**Deployed URL:** not live yet. The first workflow run passed install, tests, and build, but stopped at `configure-pages` because Pages isn't enabled. After step 3 below it should be `https://blairot.github.io/last-watch/`.
+**Deployed URL:** not live yet (`https://blairot.github.io/last-watch/` returns 404).
+- 2026-11-06: Pages was enabled with the source set to GitHub Actions. The `build` job passes every time, but `actions/deploy-pages@v4` stalls in GitHub's "updating_pages" stage and times out after 10 minutes. This happened on two separate attempts.
+- GitHub's status page reported Pages as operational. A stuck deployment of `d38d78c` had to be cancelled through the API before new deploys were accepted.
+- For comparison, `starfall-protocol` deploys fine, but it uses the legacy "deploy from a branch" source.
+- Options: retry later (Actions tab → "Deploy to GitHub Pages" → Run workflow), or switch this repo to branch-based deployment (a `gh-pages` branch) like Starfall.
 
 ### What the developer needs to do
 1. ~~Create the GitHub repository~~ (done: `blairot/last-watch`, public).
 2. ~~Push branch `main`~~ (done).
-3. In the repository: Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+3. ~~Settings → Pages → Source: GitHub Actions~~ (done 2026-11-06 through the API).
 4. The workflow `.github/workflows/deploy.yml` runs the tests, builds, and deploys on every push to `main` (or run it by hand from the Actions tab). The URL will be `https://blairot.github.io/last-watch/`. Record it here.
 5. Play it, and put notes under "Playtest notes" above.
 
