@@ -10,21 +10,19 @@ Newest session first. Put playtest notes for the next session at the very top, u
 
 ## Status (end of 2026-11-05)
 
-Sessions 1 to 4 are done except deployment. The mission plays start to finish in a desktop browser: briefing, then the map, then a victory or defeat screen. `npm run build` and `npm test` (82 tests) pass.
+Sessions 1 to 4 are done, including deployment. The mission plays start to finish in a desktop browser: briefing, then the map, then a victory or defeat screen. `npm run build` and `npm test` (82 tests) pass.
 
 **Repository:** https://github.com/blairot/last-watch (public, created 2026-11-05).
-**Deployed URL:** not live yet (`https://blairot.github.io/last-watch/` returns 404).
-- 2026-11-06: Pages was enabled with the source set to GitHub Actions. The `build` job passes every time, but `actions/deploy-pages@v4` stalls in GitHub's "updating_pages" stage and times out after 10 minutes. This happened on two separate attempts.
-- GitHub's status page reported Pages as operational. A stuck deployment of `d38d78c` had to be cancelled through the API before new deploys were accepted.
-- For comparison, `starfall-protocol` deploys fine, but it uses the legacy "deploy from a branch" source.
-- Options: retry later (Actions tab → "Deploy to GitHub Pages" → Run workflow), or switch this repo to branch-based deployment (a `gh-pages` branch) like Starfall.
+**Deployed URL:** https://blairot.github.io/last-watch/ (live since 2026-11-06; checked in a browser: briefing, map, and enemy phase work with no console errors).
+- How deploys work: every push to `main` runs `.github/workflows/deploy.yml`, which runs `npm ci`, `npm test`, and `npm run build`, then force-pushes `dist/` to the `gh-pages` branch. Pages serves that branch (Settings → Pages → Deploy from a branch → `gh-pages`, `/`).
+- Why not the official Pages Actions: on 2026-11-06, `actions/deploy-pages@v4` stalled at GitHub's "updating_pages" stage until it timed out, on two attempts, even though GitHub's status page showed Pages as operational. Branch deployment (the same setup as `starfall-protocol`) worked first time.
+- A new push takes about a minute for the workflow, plus a minute or two for Pages to publish.
 
 ### What the developer needs to do
 1. ~~Create the GitHub repository~~ (done: `blairot/last-watch`, public).
 2. ~~Push branch `main`~~ (done).
-3. ~~Settings → Pages → Source: GitHub Actions~~ (done 2026-11-06 through the API).
-4. The workflow `.github/workflows/deploy.yml` runs the tests, builds, and deploys on every push to `main` (or run it by hand from the Actions tab). The URL will be `https://blairot.github.io/last-watch/`. Record it here.
-5. Play it, and put notes under "Playtest notes" above.
+3. ~~Enable Pages~~ (done 2026-11-06 through the API; source is the `gh-pages` branch).
+4. Play it at https://blairot.github.io/last-watch/, and put notes under "Playtest notes" above.
 
 ## Sessions 2 to 4: Combat, contamination, mission flow (2026-11-05, one long run)
 
@@ -89,10 +87,10 @@ Sessions 1 to 4 are done except deployment. The mission plays start to finish in
 - The bundle is about 1.4 MB, almost all Phaser, so Vite's chunk-size warning limit is raised to 2000 kB.
 - Hot reload restarts the mission (state lives in the scene).
 - Unit art is placeholder shapes: circles = squad, red squares = Concordat, purple triangles = Unbound.
-- The workflow pins actions/checkout@v4, setup-node@v4, configure-pages@v5, upload-pages-artifact@v3, and deploy-pages@v4. Bump them if GitHub flags them as deprecated.
+- The workflow pins actions/checkout@v4 and setup-node@v4. Bump them if GitHub flags them as deprecated.
 
 ### Suggested next steps
-1. Deploy (steps above) and playtest. Tune with `npm run sim` and the `WEIGHTS` table.
+1. Playtest the deployed build. Tune with `npm run sim` and the `WEIGHTS` table.
 2. A fast-forward or skip for the enemy phase, and a tooltip on the map itself.
 3. Save and replay using the seeded RNG state.
 4. Real art: Kenney sprite packs (a download, so ask first) or custom.
